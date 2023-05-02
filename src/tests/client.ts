@@ -10,6 +10,8 @@ import {ok} from "../is";
 const chance = new Chance();
 
 async function testClient() {
+    if (!process.env.OPENAI_API_KEY) return;
+
     const understandings = await fetchUnderstandings();
 
     // const summaries = understandings

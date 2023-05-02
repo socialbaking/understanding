@@ -1,9 +1,10 @@
 {
-  "name": "@socialbaking/vouch",
-  "version": "1.0.0-alpha.63",
+  "name": "@socialbaking/understanding",
+  "version": "1.0.0-alpha.1",
   "main": "./esnext/index.js",
   "module": "./esnext/index.js",
   "types": "./esnext/index.d.ts",
+  "private": true,
   "typesVersions": {
     "*": {
       "*": [
@@ -11,21 +12,6 @@
       ],
       "tests": [
         "./esnext/tests/index.d.ts"
-      ],
-      "data": [
-        "./esnext/vouch/data/index.d.ts"
-      ],
-      "client": [
-        "./esnext/vouch/client/index.d.ts"
-      ],
-      "listen": [
-        "./esnext/vouch/listen/main.d.ts"
-      ],
-      "listen/routes": [
-        "./esnext/vouch/listen/routes.d.ts"
-      ],
-      "vercel/serverless": [
-        "./esnext/vouch/listen/serverless.d.ts"
       ]
     }
   },
@@ -34,12 +20,7 @@
   "keywords": [],
   "exports": {
     ".": "./esnext/index.js",
-    "./tests": "./esnext/tests/index.js",
-    "./data": "./esnext/vouch/data/index.js",
-    "./client": "./esnext/vouch/client/index.js",
-    "./listen": "./esnext/vouch/listen/main.js",
-    "./listen/routes": "./esnext/vouch/listen/routes.js",
-    "./vercel/serverless": "./esnext/vouch/listen/serverless.js"
+    "./tests": "./esnext/tests/index.js"
   },
   "repository": {
     "type": "git",
