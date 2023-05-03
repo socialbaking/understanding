@@ -1,8 +1,12 @@
-import {gpt} from "./client";
+import {gpt, sendMessage} from "./client";
 import {v4} from "uuid";
 import {ChatMessage} from "chatgpt";
 import {ok} from "../is";
 import {hasWebpage, Document, WebpageDocument, generateDocuments, FetchRepositoryDocumentsOptions} from "./document";
+import {Webpage} from "./webpage";
+
+export const BASE_UNDERSTANDING = "base-understanding";
+export const BASE_ANSWERS = "base-answers";
 
 export interface UnderstandingAnswers extends Record<string, unknown> {
     "summary": string,
@@ -16,6 +20,7 @@ export interface UnderstandingAnswers extends Record<string, unknown> {
 }
 
 export interface Understanding extends Record<string, unknown> {
+    type: string;
     url: string;
     uuid: string;
     text?: string;
@@ -62,14 +67,14 @@ export async function answerQuestions(document: Document, ...understandings: Und
     function getQuestions(understanding: Understanding): QuestionAnswerParts {
         const { possibleQuestions } = understanding;
 
-        const questions = possibleQuestions.filter(question => (
+        const questions = Array.isArray(possibleQuestions) ? possibleQuestions.filter(question => (
             typeof question === "string" &&
             // If the model understood that this should be a question, it would pose the sentence as a question and
             // end with a question mark. If not, it produced error data
             question.endsWith("?")
-        ));
+        )) : [];
 
-        const isAllQuestionsFoundValid = questions.length === possibleQuestions.length;
+        const isAllQuestionsFoundValid = !!possibleQuestions && questions.length === possibleQuestions.length;
 
         return { questions, isAllQuestionsFoundValid }
     }
@@ -97,7 +102,7 @@ ${
         //     systemMessage
         // })
 
-        const result = await gpt.sendMessage(message, {
+        const result = await sendMessage(message, {
             systemMessage
         });
 
@@ -121,6 +126,7 @@ ${
         return {
             ...understanding,
             ...questionParts,
+            type: BASE_ANSWERS,
             isAnswers: !!json,
             answers
         }
@@ -133,36 +139,26 @@ ${
     return withAnswers;
 }
 
-export async function fetchWebpageUnderstanding(document: WebpageDocument, options?: UnderstandingOptions): Promise<Understanding[]> {
+export interface FetchChunkUnderstandingOptions {
+    webpage: Webpage
+    chunk: string;
+    index: number;
+    array: string[];
+}
 
-    const { webpage, url } = document;
-
-    const { text } = webpage;
-
-    const chunkSize = options?.chunkSize ?? 1024;
-
-    const textChunks = splitTextIntoChunks(text, chunkSize);
-
-    const summaries: Understanding[] = [];
-
-    let index = -1;
-
-    let possibleQuestions: string[] = [];
-
-    // Send each chunk to GPT for summarization
-    for (const chunk of textChunks) {
-        index += 1;
-
-        if (options?.limit && index >= options.limit) {
-            break;
-        }
-
-        const before = chunk[index - 1] ?? "";
-        const after = textChunks[index + 1] ?? ""
-        const message = `
+export async function fetchChunkUnderstanding(options: FetchChunkUnderstandingOptions): Promise<Understanding> {
+    const {
+        chunk,
+        webpage,
+        index,
+        array
+    } = options;
+    const before = array[index - 1] ?? "";
+    const after = array[index + 1] ?? "";
+    const message = `
 ${chunk}
 `;
-        const systemMessage = `
+    const systemMessage = `
 You are ChunkParserAndSummaryGPT
 
 Parse the content of the chunk provided, the chunk is from a webpage
@@ -171,7 +167,7 @@ Provide a json document containing the results of the questions, as an object us
 
 This chunk is index: ${index}
 
-There are ${textChunks.length} total chunks to parse
+There are ${array.length} total chunks to parse
 
 ${before ? `The chunk before as a JSON string: ${JSON.stringify(before)}` : "This is the first chunk"}
 
@@ -203,37 +199,65 @@ patientEffects, string[]: What does a patient need to consider in relation to th
 `;
 
 
-        const summary: ChatMessage = await gpt.sendMessage(message, { systemMessage });
+    const summary: ChatMessage = await sendMessage(message, { systemMessage });
 
-        ok<ChatMessage & Partial<Understanding>>(summary)
+    ok<ChatMessage & Partial<Understanding>>(summary)
 
-        summary.chunk = chunk;
-        summary.index = index;
+    summary.chunk = chunk;
+    summary.index = index;
 
-        const { text } = summary;
+    const { text } = summary;
 
-        let json;
+    let json;
 
-        try {
-            json = JSON.parse(text);
-            summary.json = json;
+    try {
+        json = JSON.parse(text);
+        summary.json = json;
+    } catch {}
 
-            console.log(json)
-        } catch {}
+    if (json && Array.isArray(json.possibleQuestions)) {
+        summary.possibleQuestions = json.possibleQuestions;
+    }
 
-        if (json && Array.isArray(json.possibleQuestions)) {
-            possibleQuestions.push(...json.possibleQuestions);
-            summary.possibleQuestions = json.possibleQuestions;
+    // console.log(url, chunk, summary);
+    return {
+        ...summary,
+        type: BASE_UNDERSTANDING,
+        url: webpage.url,
+        chunk,
+        index,
+        uuid: v4()
+    }
+}
+
+export async function fetchWebpageUnderstanding(document: WebpageDocument, options?: UnderstandingOptions): Promise<Understanding[]> {
+
+    const { webpage } = document;
+
+    const { text } = webpage;
+
+    const array = splitTextIntoChunks(text, options);
+
+    const summaries: Understanding[] = [];
+
+    let index = -1;
+
+    // Send each chunk to GPT for summarization
+    for (const chunk of array) {
+        index += 1;
+
+        if (options?.limit && index >= options.limit) {
+            break;
         }
 
-        // console.log(url, chunk, summary);
-        summaries.push({
-            ...summary,
-            url,
-            chunk,
+        const summary = await fetchChunkUnderstanding({
             index,
-            uuid: v4()
+            chunk,
+            webpage,
+            array,
         });
+
+        summaries.push(summary);
     }
 
     // console.log(url, summaries);
@@ -241,22 +265,23 @@ patientEffects, string[]: What does a patient need to consider in relation to th
     return summaries;
 }
 
-function splitTextIntoChunks(text: string, givenMax: number): string[] {
+export function splitTextIntoChunks(text: string, options?: UnderstandingOptions): string[] {
     const chunks = [];
     let startIndex = 0;
+    const chunkSize = options?.chunkSize ?? 1024;
 
     function getEndIndex(max: number) {
         return startIndex + max < text.length ? startIndex + max : text.length;
     }
 
-    function getChunk(start: number = startIndex, max: number = givenMax) {
+    function getChunk(start: number = startIndex, max: number = chunkSize) {
         const endIndex = getEndIndex(max);
         return text.slice(start, endIndex);
     }
 
     while (startIndex < text.length) {
         let chunk = getChunk();
-        startIndex += givenMax;
+        startIndex += chunkSize;
 
         // If we aren't at the end
         if (startIndex < text.length) {
@@ -273,6 +298,10 @@ function splitTextIntoChunks(text: string, givenMax: number): string[] {
         }
 
         chunks.push(chunk);
+
+        if (options?.limit && chunks.length >= options.limit) {
+            break;
+        }
     }
 
     return chunks;

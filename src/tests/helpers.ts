@@ -1,19 +1,15 @@
-import {Chance} from "chance"
-import {
-    answerQuestions,
-    fetchUnderstanding,
-    fetchWebpageDocument
-} from "../understanding";
-import {writeFile, stat, readFile} from "node:fs/promises";
 import mkdirp from "mkdirp";
 import {basename, extname} from "node:path";
+import {readFile, stat, writeFile} from "node:fs/promises";
+
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+export const IS_OPENAI = !!OPENAI_API_KEY;
 
 await mkdirp("results");
 
-const chance = new Chance();
 
 let resultIndex = 0;
-function getResultKey(fileType = "json", url = import.meta.url) {
+export function getResultKey(fileType = "json", url = import.meta.url) {
     const { pathname } = new URL(url);
     const file = basename(pathname, extname(pathname));
     resultIndex += 1;
@@ -48,36 +44,3 @@ export async function runResultingTest<T>(fn: (resultFile: string) => Promise<T>
 
     return result;
 }
-
-// const REPOSITORY_OWNER = process.env.REPOSITORY_OWNER || "patient-nz";
-// const REPOSITORY = process.env.REPOSITORY || "documents"
-
-async function testClient() {
-    if (!process.env.OPENAI_API_KEY) return;
-
-    const document = await fetchWebpageDocument(
-        "https://www.legislation.govt.nz/act/public/1975/0116/latest/whole.html#DLM436101"
-    );
-
-    const summaries = await runResultingTest(async () => {
-        return fetchUnderstanding(
-            document,
-            {
-
-            }
-        );
-    });
-
-    console.log(summaries.length);
-
-    const withAnswers = await runResultingTest(async () => {
-        return answerQuestions(
-            document,
-            ...summaries
-        )
-    });
-
-    console.log(withAnswers.length);
-}
-
-await testClient();

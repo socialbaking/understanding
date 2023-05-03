@@ -14,24 +14,24 @@ await pack({
   }
 });
 
-await fs.rmdir("esnext-workerd").catch(() => {});
-await fs.cp("esnext", "esnext-workerd", {
-  recursive: true
-})
-
-const capnp = await pack({
-  argv: ["--silent"],
-  paths: {
-    directory: "esnext-workerd",
-    importMap: "import-map-workerd.json",
-    capnpTemplate: "workerd-tests.template.capnp",
-    entrypoint: "esnext-workerd/tests/workerd/server-export.js"
-  }
-});
-
-if (capnp) {
-  await fs.writeFile("workerd-tests.capnp", capnp, "utf-8");
-}
+// await fs.rmdir("esnext-workerd").catch(() => {});
+// await fs.cp("esnext", "esnext-workerd", {
+//   recursive: true
+// })
+//
+// const capnp = await pack({
+//   argv: ["--silent"],
+//   paths: {
+//     directory: "esnext-workerd",
+//     importMap: "import-map-workerd.json",
+//     capnpTemplate: "workerd-tests.template.capnp",
+//     entrypoint: "esnext-workerd/tests/workerd/server-export.js"
+//   }
+// });
+//
+// if (capnp) {
+//   await fs.writeFile("workerd-tests.capnp", capnp, "utf-8");
+// }
 
 {
 

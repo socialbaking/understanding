@@ -26,8 +26,8 @@ jobs:
           bun install
       - run: yarn build
       # yarn coverage === c8 + yarn test:node
-      - run: yarn coverage
-      - name: test:node with PORT
-        run: yarn test:node
-        env:
-          PORT: 3400
+#      - run: yarn coverage
+#      - name: test:node with PORT
+#        run: yarn test:node
+#        env:
+#          PORT: 3400

@@ -14,12 +14,12 @@ export function getGithubFileUrl(owner: string, repository: string, file: string
     ).toString()
 }
 
-export async function fetchMarkdown(url: string | URL): Promise<Markdown> {
+export async function fetchMarkdown(url: string): Promise<Markdown> {
     const response = await fetch(url);
     const markdown = await response.text();
     const markdownTokens = marked.lexer(markdown)
     const html = marked.parse(markdown);
-    const webpage = parseHTML(html);
+    const webpage = parseHTML(url, html);
     return {
         ...webpage,
         markdownTokens,
