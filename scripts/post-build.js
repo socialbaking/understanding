@@ -141,7 +141,8 @@ async function replaceBetween(fileName, tagName, content) {
   const badgeStart = readMe.indexOf(tag);
   const badgeStartAfter = badgeStart + tag.length;
   if (badgeStart === -1) {
-    throw new Error(`Expected to find "${tag}" in ${fileName}`);
+    console.warn(`Expected to find "${tag}" in ${fileName}`);
+    return;
   }
   const badgeEnd = badgeStartAfter + readMe.slice(badgeStartAfter).indexOf(tag);
   const badgeEndAfter = badgeEnd + tag.length;

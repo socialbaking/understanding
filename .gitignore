@@ -12,3 +12,4 @@ workerd-tests
 workerd-tests.capnp
 .cache
 .vercel
+results
