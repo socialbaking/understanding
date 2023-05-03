@@ -7,14 +7,23 @@ The document can be provided to ChatGPT or similar models, to continue adding th
 ## Initial Thought
 
 I am looking to take a document, any document, could be html, markdown, pdf
+
 Get its text content out
+
 Chunk up that text content
+
 Then get answers about each chunk
+
 Then, take those chunks and pass it through again with new questions
+
 I have it where it's generating questions along the way about each chunk, which I am about to feed into the model again.
+
 I'm thinking of doing like a tree of this kind of process
-I don't know if this is really a design question, and more of like, a question about any ideas around it that I should think about, or if anyone has any thoughts around how I should interact with ChatGPT around this.
+
+I am wanting to know about any ideas around it that I should think about, or if anyone has any thoughts around how I should interact with ChatGPT or language models around this.
+
 It's like the distance from the document is a more high level summary, but what I am trying to do is find the source of each part of the summary.
+
 After I can take out specific chunks and see how the very distance summary / answer comes out
 
 ### Given Steps
