@@ -1,62 +1,8 @@
-import {fetchMarkdown, getGithubFileUrl, Markdown} from "./github";
-import {fetchWebpage, Webpage} from "./webpage";
 import {gpt} from "./client";
 import {v4} from "uuid";
 import {ChatMessage} from "chatgpt";
 import {ok} from "../is";
-
-export const REPOSITORY_OWNER = process.env.REPOSITORY_OWNER || "patient-nz";
-export const REPOSITORY = process.env.REPOSITORY || "documents"
-
-const README_URL = getGithubFileUrl(REPOSITORY_OWNER, REPOSITORY, "README.md");
-
-export const readme = await fetchMarkdown(README_URL);
-
-export interface Document {
-    url: string;
-    webpage?: Webpage;
-    markdown?: Markdown;
-    blob?: Blob;
-}
-
-
-export async function fetchDocument(url: string): Promise<Document> {
-    if (url.endsWith(".md")) {
-        if (!url.startsWith("http")) {
-            url = getGithubFileUrl(REPOSITORY_OWNER, REPOSITORY, url);
-        }
-        const markdown = await fetchMarkdown(url);
-        return {
-            url,
-            markdown,
-            webpage: markdown
-        };
-    } else if (url.endsWith(".pdf")) {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        return {
-            url,
-            blob
-        };
-    } else {
-        const webpage = await fetchWebpage(url);
-        return { url, webpage };
-    }
-}
-
-export async function *generateDocuments() {
-    for (const url of readme.links) {
-        yield await fetchDocument(url);
-    }
-}
-
-export async function fetchDocuments() {
-    const documents: Document[] = [];
-    for await (const document of generateDocuments()) {
-        documents.push(document);
-    }
-    return documents;
-}
+import {hasWebpage, Document, WebpageDocument, generateDocuments, FetchRepositoryDocumentsOptions} from "./document";
 
 export interface UnderstandingAnswers extends Record<string, unknown> {
     "summary": string,
@@ -79,14 +25,6 @@ export interface Understanding extends Record<string, unknown> {
     index?: number;
     chunk: string;
     summaries?: Understanding[];
-}
-
-interface WebpageDocument extends Document {
-    webpage: Webpage;
-}
-
-function hasWebpage(document: Document): document is WebpageDocument {
-    return !!document.webpage;
 }
 
 export interface UnderstandingOptions {
@@ -152,7 +90,7 @@ Provide the answer to each question following, the questions will be in the form
 
 ${
             directQuestions.map((question, index) => `question${index}, answer${index}: ${question}`).join("\n\n")
-}
+        }
 `
         // console.log({
         //     message,
@@ -340,15 +278,15 @@ function splitTextIntoChunks(text: string, givenMax: number): string[] {
     return chunks;
 }
 
-export async function *generateUnderstandings() {
-    for await (const document of generateDocuments()) {
+export async function *generateUnderstandings(options: FetchRepositoryDocumentsOptions) {
+    for await (const document of generateDocuments(options)) {
         yield await fetchUnderstanding(document);
     }
 }
 
-export async function fetchUnderstandings() {
+export async function fetchUnderstandings(options: FetchRepositoryDocumentsOptions) {
     const understandings: Understanding[] = [];
-    for await (const understandings of generateUnderstandings()) {
+    for await (const understandings of generateUnderstandings(options)) {
         understandings.push(...understandings);
     }
     return understandings;

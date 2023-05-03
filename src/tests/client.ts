@@ -1,12 +1,9 @@
 import {Chance} from "chance"
 import {
     answerQuestions,
-    fetchDocument,
-    fetchDocuments,
     fetchUnderstanding,
-    fetchUnderstandings
-} from "../understanding/patient-documents";
-import {ok} from "../is";
+    fetchWebpageDocument
+} from "../understanding";
 import {writeFile, stat, readFile} from "node:fs/promises";
 import mkdirp from "mkdirp";
 import {basename, extname} from "node:path";
@@ -52,10 +49,13 @@ export async function runResultingTest<T>(fn: (resultFile: string) => Promise<T>
     return result;
 }
 
+// const REPOSITORY_OWNER = process.env.REPOSITORY_OWNER || "patient-nz";
+// const REPOSITORY = process.env.REPOSITORY || "documents"
+
 async function testClient() {
     if (!process.env.OPENAI_API_KEY) return;
 
-    const document = await fetchDocument(
+    const document = await fetchWebpageDocument(
         "https://www.legislation.govt.nz/act/public/1975/0116/latest/whole.html#DLM436101"
     );
 
@@ -78,15 +78,6 @@ async function testClient() {
     });
 
     console.log(withAnswers.length);
-
-    //
-    // const understandings = await fetchUnderstandings();
-    //
-    // // const summaries = understandings
-    // //     .filter(understanding => understanding.text)
-    // //     .map(understanding => [understanding.url, understanding.text])
-    //
-    // console.log(JSON.stringify(understandings, undefined, "  "));
 }
 
 await testClient();
