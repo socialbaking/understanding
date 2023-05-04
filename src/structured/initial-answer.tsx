@@ -1,4 +1,5 @@
 import {answerQuestions, Understanding, Webpage} from "../understanding";
+import {h, createFragment} from "@virtualstate/focus";
 
 export interface InitialAnswerOptions {
     understanding: Understanding;
@@ -19,7 +20,7 @@ export async function InitialAnswer(options: InitialAnswerOptions) {
         return array.every(value => typeof value === "string");
     }
 
-    return answers
+    const stringQuestions = answers
         .flatMap(answer => {
             if (!isStringArray(answer.answers)) {
                 return [];
@@ -28,4 +29,17 @@ export async function InitialAnswer(options: InitialAnswerOptions) {
                 return `${question} ${answer.answers[index] ?? ""}`;
             })
         });
+
+    return (
+        <>
+            {stringQuestions}
+            {answers.map(answer => (
+                <meta
+                    webpage={webpage}
+                    understanding={understanding}
+                    answer={answer}
+                />
+            ))}
+        </>
+    )
 }
