@@ -3,10 +3,17 @@ import {UnderstandingWithAnswers, Understanding, Webpage} from "../understanding
 
 declare global {
     namespace JSX {
-        interface ValueElement  {
+        interface ValueElement extends Record<string, unknown> {
             webpage?: Webpage
             understanding?: Understanding
-            answer?: UnderstandingWithAnswers
+            answers?: UnderstandingWithAnswers
+            summary?: string;
+            summaries?: string[];
+        }
+
+        interface AnswersElement extends ValueElement {
+            understanding: Understanding
+            answers: UnderstandingWithAnswers
         }
 
         interface IntrinsicElements {

@@ -119,9 +119,9 @@ ${
 
         // console.log(result);
 
-        console.log(
-            directQuestions.map((question, index) => `${question} ${answers[index] ?? ""}`).join("\n")
-        );
+        // console.log(
+        //     directQuestions.map((question, index) => `${question} ${answers[index] ?? ""}`).join("\n")
+        // );
 
         return {
             ...understanding,

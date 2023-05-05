@@ -1,5 +1,5 @@
 import type {WebpageUnderstandingOptions} from "./webpage-understanding";
-import {h, createFragment} from "@virtualstate/focus";
+import {h, createFragment} from "../jsx";
 import {fetchChunkUnderstanding} from "../understanding";
 import {InitialAnswer} from "./initial-answer";
 

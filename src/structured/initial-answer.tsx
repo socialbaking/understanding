@@ -1,5 +1,7 @@
 import {answerQuestions, Understanding, Webpage} from "../understanding";
-import {h, createFragment} from "@virtualstate/focus";
+import {h, createFragment} from "../jsx";
+import {SecondLevelQuestion} from "./second-level-question";
+import {SecondLevelQuestioning} from "./second-level";
 
 export interface InitialAnswerOptions {
     understanding: Understanding;
@@ -33,11 +35,11 @@ export async function InitialAnswer(options: InitialAnswerOptions) {
     return (
         <>
             {stringQuestions}
-            {answers.map(answer => (
+            {answers.map((answer, index, array) => (
                 <meta
                     webpage={webpage}
                     understanding={understanding}
-                    answer={answer}
+                    answers={answer}
                 />
             ))}
         </>

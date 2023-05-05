@@ -50,21 +50,24 @@ const storage = await kvsEnvStorage({
     version: 1
 });
 
+let hit = 0n;
+let miss = 0n;
+let set = 0n;
+
 export async function sendMessage(message: string, options?: SendMessageOptions): Promise<ChatMessage> {
     const tokensToUse = getMessageTokenCount(message, options);
     return limit(() => run(0));
 
     async function run(tries = 0): Promise<ChatMessage> {
 
-        let cacheKey;
+        let cacheKey, cacheMessage;
 
         if (cacheEnabled) {
             const cacheKeyHash = createHash("sha256");
-            cacheKeyHash.update(
-                options?.systemMessage ?
-                    `${message}\n${options.systemMessage}` :
-                    message
-            );
+            cacheMessage = options?.systemMessage ?
+                `${message}\n${options.systemMessage}` :
+                message;
+            cacheKeyHash.update(cacheMessage);
             cacheKey = cacheKeyHash.digest().toString("hex");
 
             if (await storage.has(cacheKey)) {
@@ -73,11 +76,13 @@ export async function sendMessage(message: string, options?: SendMessageOptions)
                     const message = JSON.parse(info);
                     if (message) {
                         // console.log("Cache hit", cacheKey);
+                        hit += 1n;
                         return message;
                     }
                 }
             }
             // console.log("Cache miss", cacheKey);
+            miss += 1n;
         }
 
 
@@ -87,6 +92,8 @@ export async function sendMessage(message: string, options?: SendMessageOptions)
 
             if (cacheEnabled && cacheKey) {
                 // console.log("Cache set", cacheKey)
+                set += 1n;
+                console.log({ set, miss, hit, cacheMessage });
                 await storage.set(cacheKey, JSON.stringify(result));
             }
 
@@ -95,12 +102,12 @@ export async function sendMessage(message: string, options?: SendMessageOptions)
             if (tries > 10) {
                 throw error;
             }
-            console.log({ tokensToUse });
-            console.log(error);
-            if (console.dir) {
-                console.dir(error);
-            }
-            await new Promise(resolve => setTimeout(resolve, 1500 * (tries + 1)));
+            // console.log({ tokensToUse });
+            // console.log(error);
+            // if (console.dir) {
+            //     console.dir(error);
+            // }
+            await new Promise(resolve => setTimeout(resolve, 2500 * (tries + 1)));
             return run(tries + 1);
         }
     }

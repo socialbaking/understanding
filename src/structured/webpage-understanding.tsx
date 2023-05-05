@@ -1,6 +1,6 @@
 import {splitTextIntoChunks, UnderstandingOptions, Webpage} from "../understanding";
 import {WebsiteTextChunk} from "./webpage-text-chunk";
-import {h, createFragment} from "@virtualstate/focus";
+import {h, createFragment} from "../jsx";
 
 export interface WebpageUnderstandingOptions extends UnderstandingOptions {
     webpage: Webpage
