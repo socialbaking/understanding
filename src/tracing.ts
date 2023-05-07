@@ -15,11 +15,12 @@ export const sdk = new HoneycombSDK({
                 enabled: false,
             },
         }),
-    ],
+    ]
 });
 
 sdk.start();
 
 export async function shutdown() {
+    await new Promise(resolve => setTimeout(resolve, 5000));
     return sdk.shutdown()
 }

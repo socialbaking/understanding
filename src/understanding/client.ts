@@ -1,7 +1,7 @@
 import {ChatGPTAPI, ChatMessage, SendMessageOptions} from "chatgpt";
 import { ok } from "../is";
 import {encode} from "gpt-3-encoder";
-import pLimit from "p-limit";
+import pLimit, {LimitFunction} from "p-limit";
 import { createHash } from "node:crypto";
 import { kvsEnvStorage } from "@kvs/env";
 
@@ -45,6 +45,28 @@ export function getMessageTokenCount(message: string, options?: SendMessageOptio
 
 const limit = pLimit(5);
 
+const uniqueKeyLimit = new Map<string, Promise<ChatMessage>>();
+
+function limitKey(key: string, fn: () => Promise<ChatMessage>): Promise<ChatMessage> {
+    const existingKeyPromise = uniqueKeyLimit.get(key);
+    let nextPromise;
+    if (existingKeyPromise) {
+        nextPromise = existingKeyPromise.then(() => fn());
+    } else {
+        nextPromise = fn();
+    }
+    const caughtPromise = nextPromise
+        .finally(() => {
+            if (uniqueKeyLimit.get(key) === caughtPromise) {
+                uniqueKeyLimit.delete(key)
+            }
+        })
+        .catch((error) => void error)
+    // catch any errors so next promise can move on
+    uniqueKeyLimit.set(key, caughtPromise);
+    return nextPromise;
+}
+
 const storage = await kvsEnvStorage({
     name: "gpt-cache",
     version: 1
@@ -53,37 +75,42 @@ const storage = await kvsEnvStorage({
 let hit = 0n;
 let miss = 0n;
 let set = 0n;
+const uniqueKeysHit = new Set();
 
 export async function sendMessage(message: string, options?: SendMessageOptions): Promise<ChatMessage> {
     const tokensToUse = getMessageTokenCount(message, options);
+
+    let cacheKey: string, cacheMessage: string;
+
+    if (cacheEnabled) {
+        const cacheKeyHash = createHash("sha256");
+        cacheMessage = options?.systemMessage ?
+            `${message}\n${options.systemMessage}` :
+            message;
+        cacheKeyHash.update(cacheMessage);
+        cacheKey = cacheKeyHash.digest().toString("hex");
+
+        if (await storage.has(cacheKey)) {
+            const info = await storage.get(cacheKey);
+            if (typeof info === "string") {
+                const message = JSON.parse(info);
+                if (message) {
+                    // console.log("Cache hit", cacheKey);
+                    hit += 1n;
+                    uniqueKeysHit.add(cacheKey);
+                    // logCacheHit();
+                    return message;
+                }
+            }
+        }
+        // console.log("Cache miss", cacheKey);
+        miss += 1n;
+        return limitKey(cacheKey, () => limit(() => run(0)));
+    }
+
     return limit(() => run(0));
 
     async function run(tries = 0): Promise<ChatMessage> {
-
-        let cacheKey, cacheMessage;
-
-        if (cacheEnabled) {
-            const cacheKeyHash = createHash("sha256");
-            cacheMessage = options?.systemMessage ?
-                `${message}\n${options.systemMessage}` :
-                message;
-            cacheKeyHash.update(cacheMessage);
-            cacheKey = cacheKeyHash.digest().toString("hex");
-
-            if (await storage.has(cacheKey)) {
-                const info = await storage.get(cacheKey);
-                if (typeof info === "string") {
-                    const message = JSON.parse(info);
-                    if (message) {
-                        // console.log("Cache hit", cacheKey);
-                        hit += 1n;
-                        return message;
-                    }
-                }
-            }
-            // console.log("Cache miss", cacheKey);
-            miss += 1n;
-        }
 
 
         try {
@@ -93,7 +120,7 @@ export async function sendMessage(message: string, options?: SendMessageOptions)
             if (cacheEnabled && cacheKey) {
                 // console.log("Cache set", cacheKey)
                 set += 1n;
-                console.log({ set, miss, hit, cacheMessage });
+                logCacheHit();
                 await storage.set(cacheKey, JSON.stringify(result));
             }
 
@@ -110,5 +137,9 @@ export async function sendMessage(message: string, options?: SendMessageOptions)
             await new Promise(resolve => setTimeout(resolve, 2500 * (tries + 1)));
             return run(tries + 1);
         }
+    }
+
+    function logCacheHit() {
+        console.log({ set, miss, hit, hitUnique: uniqueKeysHit.size });
     }
 }

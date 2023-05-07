@@ -35,11 +35,15 @@ export function isIteratorYieldResult<T>(
     );
 }
 
+// const openSpans = new Set();
+
+export const LOCAL_JSX_COUNTS = new Map<unknown, number>();
+
 function withUnderstanding(type: ComponentFn, options: OptionsRecord, ...args: unknown[]) {
     const { name } = type;
 
     function connect(options: OptionsRecord, input?: unknown) {
-        console.log("connect");
+        // console.log("connect");
 
         let phaseIndex = 0;
         let isComplete = false;
@@ -53,7 +57,8 @@ function withUnderstanding(type: ComponentFn, options: OptionsRecord, ...args: u
             }
 
             async function *asyncIterableConnect() {
-                console.log("connect async iterable");
+                span.setAttribute("phase", "async-iterable");
+                // console.log("connect async iterable");
                 const iterator = asyncIterable[Symbol.asyncIterator]();
                 let result;
                 do {
@@ -64,7 +69,9 @@ function withUnderstanding(type: ComponentFn, options: OptionsRecord, ...args: u
                 } while (!result.done);
                 isComplete = true;
                 span.end();
-                console.log("end async iterable");
+                // openSpans.delete(span);
+                // console.log("end async iterable");
+                // console.log({ openSpans: openSpans.size });
             }
 
         }
@@ -85,6 +92,8 @@ function withUnderstanding(type: ComponentFn, options: OptionsRecord, ...args: u
                 isComplete = true;
                 setAttribute("returnType", typeof returnValue);
                 span.end();
+                // openSpans.delete(span);
+                // console.log({ openSpans: openSpans.size });
             }
             return returnValue;
 
@@ -95,6 +104,7 @@ function withUnderstanding(type: ComponentFn, options: OptionsRecord, ...args: u
         }
 
         async function promisePhase(span: Span, promise: Promise<unknown>): Promise<unknown> {
+            span.setAttribute("phase", "promise");
             try {
                 const returnValue = await promise;
                 return switchPhase(span, returnValue);
@@ -108,6 +118,8 @@ function withUnderstanding(type: ComponentFn, options: OptionsRecord, ...args: u
         }
 
         function syncPhase(span: Span) {
+            // openSpans.add(span);
+
             span.setAttribute("name", name);
             span.setAttribute("phase", "sync");
             try {
@@ -129,6 +141,12 @@ function withUnderstanding(type: ComponentFn, options: OptionsRecord, ...args: u
 }
 
 export function h(type: unknown, options: OptionsRecord, ...args: unknown[]) {
+
+    LOCAL_JSX_COUNTS.set(
+        type,
+        (LOCAL_JSX_COUNTS.get(type) ?? 0) + 1
+    );
+
     const node: unknown = focus.h(type, options, ...args);
     if (!isFn(type)) {
         return node;
