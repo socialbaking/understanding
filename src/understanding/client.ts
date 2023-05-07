@@ -87,7 +87,7 @@ let errors = 0n;
 const uniqueKeysHit = new Set();
 
 function logCacheHit() {
-    console.log({ set, miss, hit, hitUnique: uniqueKeysHit.size, errors });
+  console.log({ set, miss, hit, hitUnique: uniqueKeysHit.size, errors });
 }
 
 async function getFromCache(cacheKey: string): Promise<ChatMessage> {
@@ -113,6 +113,24 @@ function isResponseError(error: Error): error is ResponseError {
 
 export const DEFAULT_MESSAGE_TOKEN_MAX = 5000; // Could be different tbh, like 32k tokens for a single message, lets set low
 export const DEFAULT_MESSAGE_TOKEN_RATE_MAX = 90000;
+const DEBUG = false;
+
+
+let lastLog: string = "";
+
+function log(...parts: unknown[]) {
+    if (!DEBUG) return;
+    const [firstPart] = parts;
+    if (parts.length === 1 && typeof firstPart === "string") {
+        if (lastLog === firstPart) {
+            return;
+        }
+        lastLog = firstPart;
+    } else {
+        lastLog = "";
+    }
+    console.log(...parts);
+}
 
 function createSchedule() {
 
@@ -251,21 +269,6 @@ function createSchedule() {
         if (!scheduleRequests.length) return;
 
         return setCycleTimeout(DEFAULT_RESET_TIMEOUT);
-    }
-
-    let lastLog: string = "";
-
-    function log(...parts: unknown[]) {
-        const [firstPart] = parts;
-        if (parts.length === 1 && typeof firstPart === "string") {
-            if (lastLog === firstPart) {
-                return;
-            }
-            lastLog = firstPart;
-        } else {
-            lastLog = "";
-        }
-        console.log(...parts);
     }
 
     function setCycleTimeout(defaultTimeout = 0): void {

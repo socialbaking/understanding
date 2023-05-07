@@ -24,12 +24,13 @@ if (IS_OPENAI) {
     1981/0118: 314 chunks, 750 meta
     2020/0031: 18 chunks, 38 meta
      */
+    const CRAWL = 3;
     const results = await children(
         <>
-            <Webpage url={"https://www.legislation.govt.nz/act/public/1975/0116/latest/whole.html#DLM436101"} enabled crawl={false} />
-            <Webpage url={"https://www.legislation.govt.nz/act/public/2013/0053/latest/whole.html#DLM5042921"} enabled crawl={false} />
-            <Webpage url={"https://www.legislation.govt.nz/act/public/1981/0118/latest/whole.html#DLM53790"} enabled crawl={false} />
-            <Webpage url={"https://www.legislation.govt.nz/act/public/2020/0031/latest/LMS23223.html#LMS23193"} enabled crawl={false} />
+            <Webpage url={"https://www.legislation.govt.nz/act/public/1975/0116/latest/whole.html#DLM436101"} enabled crawl={CRAWL} />
+            <Webpage url={"https://www.legislation.govt.nz/act/public/2013/0053/latest/whole.html#DLM5042921"} enabled crawl={CRAWL} />
+            <Webpage url={"https://www.legislation.govt.nz/act/public/1981/0118/latest/whole.html#DLM53790"} enabled crawl={CRAWL} />
+            <Webpage url={"https://www.legislation.govt.nz/act/public/2020/0031/latest/LMS23223.html#LMS23193"} enabled crawl={CRAWL} />
         </>
     );
     console.log(LOCAL_JSX_COUNTS);
@@ -50,6 +51,7 @@ if (IS_OPENAI) {
         .map(properties)
         .filter(isValueElementProperties);
 
+
     const urls = meta.reduce<Map<string, JSX.ValueElement[]>>(
         (map, meta: JSX.ValueElement) => {
             const url = meta.webpage?.url
@@ -62,6 +64,12 @@ if (IS_OPENAI) {
         new Map<string, JSX.ValueElement[]>()
     );
 
+
+    console.log({
+        meta: meta.length,
+        urls: urls.size
+    });
+
     const summaries =  [...urls.keys()]
         .map(url => {
             const meta = urls.get(url);
@@ -69,13 +77,13 @@ if (IS_OPENAI) {
                 .filter(meta => meta.index === -1);
             console.log({ negativeOnes: negativeOnes.length });
             const {
-                header,
+                title,
                 summary
             } = meta
                 .filter(meta => meta.index === -1)
                 .sort(({ historyLength: a }, { historyLength: b }) => a > b ? -1 : 1)
                 .at(0);
-            return [url, header, summary].join("\n\n");
+            return [url, title, summary].join("\n\n");
         })
 
     console.log(summaries.join("\n\n\n"))

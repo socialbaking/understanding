@@ -25,7 +25,7 @@ export async function SummariseChunk(options: SummariseChunkOptions) {
         summaries.join("\n\n")
     )
 
-    console.log(index, summary);
+    // console.log(index, summary);
 
     // console.log({
     //     summaries,

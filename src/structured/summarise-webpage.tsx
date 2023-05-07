@@ -8,6 +8,7 @@ import {
 } from "../understanding";
 import {SummariseChunk} from "./summarise-chunk";
 import {children, name, properties} from "@virtualstate/focus";
+import {CheerioAPI} from "cheerio";
 
 export interface SummariseWebpageOptions extends UnderstandingOptions {
     webpage: Webpage;
@@ -83,7 +84,7 @@ export async function *SummariseWebpage(options: SummariseWebpageOptions) {
 
     const isJoinedOverMax = joinedTokens > DEFAULT_MESSAGE_TOKEN_MAX;
 
-    console.log({ url: webpage.url, joined, joinedTokens, isJoinedOverMax, joinedParts: groupedSummaries.length, originalParts: summaries.length, tokensPerPart: joinedTokens / groupedSummaries.length  });
+    // console.log({ url: webpage.url, joined, joinedTokens, isJoinedOverMax, joinedParts: groupedSummaries.length, originalParts: summaries.length, tokensPerPart: joinedTokens / groupedSummaries.length  });
 
     let secondarySummaryNodes: unknown[];
 
@@ -102,8 +103,11 @@ export async function *SummariseWebpage(options: SummariseWebpageOptions) {
 
 
     // This should be using from secondarySummaryNodesInstead
-    const summary = await summarise(joined);
-    const webpageHeader = await header(joined);
+    const summaryHeader = await header(joined);
+    const title = webpage.$("title").text()?.trim() || summaryHeader;
+    const summary = await summarise(`${title}:\n\n${joined}`).catch(() => "");
+
+    // console.log(history.length, title, summary);
 
     yield (
         <>
@@ -113,7 +117,8 @@ export async function *SummariseWebpage(options: SummariseWebpageOptions) {
                 summary={summary}
                 summaries={groupedSummaries}
                 historyLength={history.length}
-                header={webpageHeader}
+                header={summaryHeader}
+                title={title}
             />
             {chunkNodes}
             {secondarySummaryNodes}

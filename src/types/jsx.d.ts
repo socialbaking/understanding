@@ -12,6 +12,7 @@ declare global {
             index?: number;
             historyLength?: number;
             header?: string;
+            title?: string;
         }
 
         interface AnswersElement extends ValueElement {
