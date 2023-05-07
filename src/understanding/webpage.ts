@@ -2,6 +2,8 @@ import {AnyNode, CheerioAPI, load} from "cheerio";
 import pLimit, {LimitFunction} from "p-limit";
 import {kvsEnvStorage} from "@kvs/env";
 import {createHash} from "node:crypto";
+import opentelemetry from "@opentelemetry/api";
+import {tracer} from "../trace";
 
 export interface Webpage {
     url: string;
@@ -33,6 +35,7 @@ function getCacheKey(url: string) {
 }
 
 export async function fetchWebpage(url: string, options?: RequestInit): Promise<Webpage> {
+    const span = opentelemetry.trace.getActiveSpan()
 
     let cacheKey;
 
@@ -40,19 +43,31 @@ export async function fetchWebpage(url: string, options?: RequestInit): Promise<
         cacheKey = getCacheKey(url);
         const html = await storage.get(cacheKey);
         if (html && typeof html === "string") {
+            span?.setAttribute("webpage.cacheHit", true);
             return parseHTML(url, html);
         }
+        span?.setAttribute("webpage.cacheMiss", true);
     }
 
     const headers = new Headers(options?.headers);
     headers.set("Accept", "text/html");
     const limit = getLimit(url);
-    const response = await limit(async () => fetch(url, {
-        ...options,
-        headers
-    }));
+    const response = await limit(async () => {
+        return tracer.startActiveSpan("webpage.fetch", async (span) => {
+            span.setAttribute("url", url);
+            span.setAttribute("method", options?.method ?? "get");
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+            span.setAttribute("status", response.status);
+            span.end();
+            return response;
+        })
+    });
     const html = await response.text();
     if (cacheKey) {
+        span?.setAttribute("webpage.cacheSet", true);
         await storage.set(cacheKey, html);
     }
 

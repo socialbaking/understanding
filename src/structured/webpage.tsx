@@ -6,12 +6,13 @@ import {children} from "@virtualstate/focus";
 export interface WebpageOptions extends UnderstandingOptions {
     url: string;
     crawl?: boolean | number;
+    crawlSameOrigin?: boolean;
     enabled?: boolean;
     referrer?: string;
 }
 
 export async function *Webpage(options: WebpageOptions) {
-    const { url, crawl, enabled, referrer } = options;
+    const { url, crawl, enabled, referrer, crawlSameOrigin } = options;
 
     if (enabled === false) return;
 
@@ -32,7 +33,7 @@ export async function *Webpage(options: WebpageOptions) {
     }
 
     if (crawl) {
-        const { pathname, hostname } = new URL(url);
+        const { pathname, origin } = new URL(url);
 
         function getNextCrawl() {
             // If it's true, crawl one more level, the default
@@ -51,7 +52,15 @@ export async function *Webpage(options: WebpageOptions) {
                 {
                     webpage.links
                         .map(link => new URL(link, url))
-                        .filter(link => link.hostname !== hostname || link.pathname !== pathname)
+                        .filter(link => {
+                            if (link.origin === origin && link.pathname === pathname) {
+                                return false;
+                            }
+                            if (crawlSameOrigin === false) {
+                                return true;
+                            }
+                            return link.origin === origin;
+                        })
                         .map(url => <Webpage {...options} url={url.toString()} referrer={options.url} crawl={nextCrawl} />)
                 }
             </>

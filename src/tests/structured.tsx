@@ -24,13 +24,34 @@ if (IS_OPENAI) {
     1981/0118: 314 chunks, 750 meta
     2020/0031: 18 chunks, 38 meta
      */
-    const CRAWL = 3;
+    const CRAWL = 2;
+    const CRAWL_SAME_ORIGIN = true;
     const results = await children(
         <>
-            <Webpage url={"https://www.legislation.govt.nz/act/public/1975/0116/latest/whole.html#DLM436101"} enabled crawl={CRAWL} />
-            <Webpage url={"https://www.legislation.govt.nz/act/public/2013/0053/latest/whole.html#DLM5042921"} enabled crawl={CRAWL} />
-            <Webpage url={"https://www.legislation.govt.nz/act/public/1981/0118/latest/whole.html#DLM53790"} enabled crawl={CRAWL} />
-            <Webpage url={"https://www.legislation.govt.nz/act/public/2020/0031/latest/LMS23223.html#LMS23193"} enabled crawl={CRAWL} />
+            <Webpage
+                url={"https://www.legislation.govt.nz/act/public/1975/0116/latest/whole.html#DLM436101"}
+                enabled
+                crawl={CRAWL}
+                crawlSameOrigin={CRAWL_SAME_ORIGIN}
+            />
+            <Webpage
+                url={"https://www.legislation.govt.nz/act/public/2013/0053/latest/whole.html#DLM5042921"}
+                enabled
+                crawl={CRAWL}
+                crawlSameOrigin={CRAWL_SAME_ORIGIN}
+            />
+            <Webpage
+                url={"https://www.legislation.govt.nz/act/public/1981/0118/latest/whole.html#DLM53790"}
+                enabled
+                crawl={CRAWL}
+                crawlSameOrigin={CRAWL_SAME_ORIGIN}
+            />
+            <Webpage
+                url={"https://www.legislation.govt.nz/act/public/2020/0031/latest/LMS23223.html#LMS23193"}
+                enabled
+                crawl={CRAWL}
+                crawlSameOrigin={CRAWL_SAME_ORIGIN}
+            />
         </>
     );
     console.log(LOCAL_JSX_COUNTS);

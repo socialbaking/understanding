@@ -8,6 +8,8 @@ import toMillisecond from "string-to-ms";
 import {defer} from "@virtualstate/promise";
 import {scheduler} from "timers/promises";
 import {compositeKey} from "@virtualstate/composite-key";
+import opentelemetry from "@opentelemetry/api";
+import {tracer} from "../trace";
 
 const { OPENAI_API_KEY: apiKey, OPENAI_TOKENS_PER_MIN: tokensPerMinString, OPENAI_CACHE } = process.env;
 
@@ -351,39 +353,60 @@ function createSchedule() {
 const schedule = createSchedule();
 
 export async function sendMessage(message: string, options?: SendMessageOptions): Promise<ChatMessage> {
+
     const tokens = getMessageTokenCount(message, options);
 
-    if (!CACHE_ENABLED) {
-        return runWithLimit();
-    }
+    return tracer.startActiveSpan("gpt.sendMessage", async (span) => {
+        span.setAttribute("gpt.message", message);
+        if (options.systemMessage) {
+            span.setAttribute("gpt.systemMessage", options.systemMessage);
+        }
+        const result = await maybeWithCache();
+        span.setAttribute("gpt.result", result.text);
+        span.end();
+        return result;
+    });
 
-    const cacheKeyHash = createHash("sha256");
-    const cacheMessage = options?.systemMessage ?
-        `${message}\n${options.systemMessage}` :
-        message;
-    cacheKeyHash.update(cacheMessage);
-    const cacheKey = cacheKeyHash.digest().toString("hex");
-    const cachedMessage = await getFromCache(cacheKey);
-    if (cachedMessage) {
-        hit += 1n;
-        uniqueKeysHit.add(cacheKey);
-        return cachedMessage;
-    }
-    return limitKey(cacheKey, () => runKey(cacheKey))
+    async function maybeWithCache() {
 
-    async function runKey(cacheKey: string) {
+        if (!CACHE_ENABLED) {
+            return runWithLimit();
+        }
+
+        const cacheKeyHash = createHash("sha256");
+        const cacheMessage = options?.systemMessage ?
+            `${message}\n${options.systemMessage}` :
+            message;
+        cacheKeyHash.update(cacheMessage);
+        const cacheKey = cacheKeyHash.digest().toString("hex");
         const cachedMessage = await getFromCache(cacheKey);
         if (cachedMessage) {
+            const span = opentelemetry.trace.getActiveSpan();
+            span?.setAttribute("gpt.cacheHit", true);
+            hit += 1n;
+            uniqueKeysHit.add(cacheKey);
+            return cachedMessage;
+        }
+        return limitKey(cacheKey, () => runKey(cacheKey))
+    }
+
+    async function runKey(cacheKey: string) {
+        const span = opentelemetry.trace.getActiveSpan();
+        const cachedMessage = await getFromCache(cacheKey);
+        if (cachedMessage) {
+            span?.setAttribute("gpt.cacheHit", true);
             hit += 1n;
             uniqueKeysHit.add(cacheKey);
             return cachedMessage;
         }
 
         miss += 1n;
+        span?.setAttribute("gpt.cacheMiss", true);
 
         const message = await runWithLimit();
 
         set += 1n;
+        span?.setAttribute("gpt.cacheSet", true);
         logCacheHit();
 
         await storage.set(cacheKey, JSON.stringify(message));
@@ -398,6 +421,8 @@ export async function sendMessage(message: string, options?: SendMessageOptions)
 
 
     async function run(tries = 0): Promise<ChatMessage> {
+        const span = opentelemetry.trace.getActiveSpan();
+        span?.setAttribute("gpt.tries", tries);
         try {
             return await gpt.sendMessage(message, options)
         } catch (error) {
