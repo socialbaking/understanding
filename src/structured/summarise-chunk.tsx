@@ -43,6 +43,7 @@ export async function SummariseChunk(options: SummariseChunkOptions) {
             summary={summary}
             summaries={summaries}
             historyLength={options.history.length}
+            questions={questions}
         />
     )
 

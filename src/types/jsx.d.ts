@@ -13,6 +13,7 @@ declare global {
             historyLength?: number;
             header?: string;
             title?: string;
+            questions?: string[];
         }
 
         interface AnswersElement extends ValueElement {
