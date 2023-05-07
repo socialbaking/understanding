@@ -9,6 +9,9 @@ declare global {
             answers?: UnderstandingWithAnswers
             summary?: string;
             summaries?: string[];
+            index?: number;
+            historyLength?: number;
+            header?: string;
         }
 
         interface AnswersElement extends ValueElement {

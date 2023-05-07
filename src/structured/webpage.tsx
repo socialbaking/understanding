@@ -1,7 +1,6 @@
 import {fetchWebpage, UnderstandingOptions} from "./client";
 import {h, createFragment} from "../jsx";
-import {WebpageUnderstanding} from "./webpage-understanding";
-import {SecondLevelQuestioning} from "./second-level";
+import {SummariseWebpage} from "./summarise-webpage";
 import {children} from "@virtualstate/focus";
 
 export interface WebpageOptions extends UnderstandingOptions {
@@ -22,17 +21,13 @@ export async function *Webpage(options: WebpageOptions) {
     } catch (error) {
         console.error(`Failed to fetch the webpage ${url}`);
         if (referrer) console.error(`Referrer: ${referrer}`);
-        console.error(error);
+        console.error(error.message ?? error, error.cause?.message ?? "");
         return;
     }
 
     let nodes;
 
-    for await (nodes of children(
-        <SecondLevelQuestioning webpage={webpage}>
-            <WebpageUnderstanding {...options} webpage={webpage} />
-        </SecondLevelQuestioning>
-    )) {
+    for await (nodes of children(<SummariseWebpage {...options} webpage={webpage} />)) {
         yield nodes;
     }
 

@@ -1,7 +1,5 @@
 import {answerQuestions, Understanding, Webpage} from "../understanding";
 import {h, createFragment} from "../jsx";
-import {SecondLevelQuestion} from "./second-level-question";
-import {SecondLevelQuestioning} from "./second-level";
 
 export interface InitialAnswerOptions {
     understanding: Understanding;
