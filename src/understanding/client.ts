@@ -10,6 +10,8 @@ import {scheduler} from "timers/promises";
 import {compositeKey} from "@virtualstate/composite-key";
 import opentelemetry from "@opentelemetry/api";
 import {tracer} from "../trace";
+import {isString} from "@virtualstate/focus";
+import {Runtime} from "inspector";
 
 const { OPENAI_API_KEY: apiKey, OPENAI_TOKENS_PER_MIN: tokensPerMinString, OPENAI_CACHE } = process.env;
 
@@ -456,4 +458,57 @@ export async function header(text?: string) {
         systemMessage: "Provide a header for this text"
     });
     return result.text;
+}
+
+export interface StringArrayChatMessage extends ChatMessage {
+    strings: string[];
+}
+
+export async function sendMessageForArray(message: string, givenOptions: SendMessageOptions & { systemMessage: string }): Promise<StringArrayChatMessage> {
+    const { systemMessage } = givenOptions;
+    const options = {
+        ...givenOptions,
+        systemMessage: `${systemMessage}\n\nRespond only with a JSON array of strings like: ["Answer 1", "Answer 2"]`
+    };
+    const result = await sendMessage(message, options);
+    const json = JSON.parse(result.text);
+    // console.log(message, "\n", options.systemMessage, "\n", result.text);
+    ok(Array.isArray(json), "Expected array to be returned");
+    if (json.length) {
+        const everyIsString = json.every(isString);
+        ok(everyIsString, "Expected all items in array to be a string");
+    }
+    return {
+        ...result,
+        strings: json
+    };
+}
+
+export async function askForQuestions(text?: string): Promise<string[]> {
+    if (!text) return [];
+
+    try {
+
+        const { strings } = await retrySendMessageFn(sendMessageForArray, text, {
+            systemMessage: "What questions could be asked about this?"
+        });
+
+        return strings;
+    } catch {
+        return [];
+    }
+}
+
+async function retrySendMessageFn<R extends ChatMessage, A extends unknown[]>(fn: (...args: A) => Promise<R>, ...args: A): Promise<R> {
+    let triesLeft = 10;
+    let lastError;
+    while (triesLeft) {
+        triesLeft -= 1;
+        try {
+            return await fn(...args);
+        } catch (e) {
+            lastError = e;
+        }
+    }
+    throw await Promise.reject(lastError ?? new Error(`Failed to successfully invoke ${fn.name}`));
 }

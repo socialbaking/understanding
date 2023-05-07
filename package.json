@@ -125,12 +125,8 @@
     "generate": "yarn build && node esnext/generate.js",
     "prepublishOnly": "npm run build",
     "test": "yarn build && yarn test:node",
-    "test:remote": "yarn test:deno:remote",
-    "test:node": "export $(cat .env | xargs) && node --enable-source-maps esnext/tests/index.js",
-    "test:node:remote": "export $(cat .env | xargs) && node --experimental-network-imports --enable-source-maps -e '(async () => { return await import(\"https://cdn.skypack.dev/@virtualstate/focus/tests\");})();\n'",
-    "test:node:inspect": "yarn build && export $(cat .env | xargs) && node --enable-source-maps --inspect-brk esnext/tests/index.js",
-    "test:deno:inspect": "yarn build && export $(cat .env | xargs) && deno run --allow-write --allow-env --allow-read --allow-net --import-map=import-map-deno.json --inspect-brk esnext/tests/index.js",
-    "coverage": "export $(cat .env | xargs) && c8 node esnext/tests/index.js && yarn postbuild",
-    "start": "yarn build && node esnext/vouch/listen/main.js"
+    "test:node": "export $(cat .env | xargs) && node --max-old-space-size=15360 --enable-source-maps esnext/tests/index.js",
+    "test:node:inspect": "yarn build && export $(cat .env | xargs) && node --max-old-space-size=15360 --enable-source-maps --inspect-brk esnext/tests/index.js",
+    "coverage": "export $(cat .env | xargs) && c8 node esnext/tests/index.js && yarn postbuild"
   }
 }

@@ -1,5 +1,5 @@
 import {h, createFragment} from "../jsx";
-import {summarise, Webpage} from "../understanding";
+import {askForQuestions, summarise, Webpage} from "../understanding";
 
 export interface SummariseChunkOptions {
     webpage: Webpage;
@@ -23,6 +23,10 @@ export async function SummariseChunk(options: SummariseChunkOptions) {
 
     const summary = await summarise(
         summaries.join("\n\n")
+    )
+
+    const questions = await askForQuestions(
+        chunk
     )
 
     // console.log(index, summary);

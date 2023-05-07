@@ -24,7 +24,7 @@ if (IS_OPENAI) {
     1981/0118: 314 chunks, 750 meta
     2020/0031: 18 chunks, 38 meta
      */
-    const CRAWL = 2;
+    const CRAWL = 1;
     const CRAWL_SAME_ORIGIN = true;
     const results = await children(
         <>
