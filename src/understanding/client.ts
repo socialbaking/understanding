@@ -91,7 +91,8 @@ let errors = 0n;
 const uniqueKeysHit = new Set();
 
 function logCacheHit() {
-  console.log({ set, miss, hit, hitUnique: uniqueKeysHit.size, errors });
+    const remaining = miss - set;
+    console.log({ set, miss, remaining, hit, hitUnique: uniqueKeysHit.size, errors });
 }
 
 async function getFromCache(cacheKey: string): Promise<ChatMessage> {
@@ -309,6 +310,9 @@ function createSchedule() {
             // Give a default timeout so we at least batch some tokens together and not overwhelm the api
             timeout = 2500;
         }
+
+        // Make sure we aren't waiting ages, let it error out if we hit it too early
+        timeout = Math.min(timeout, 2 * DEFAULT_RESET_TIMEOUT);
 
         waiting = true;
         log(`Waiting ${timeout / 1000} seconds until trying messages`);

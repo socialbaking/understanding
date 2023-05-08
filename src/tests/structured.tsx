@@ -24,7 +24,7 @@ if (IS_OPENAI) {
     1981/0118: 314 chunks, 750 meta
     2020/0031: 18 chunks, 38 meta
      */
-    const CRAWL = 1;
+    const CRAWL = 0;
     const CRAWL_SAME_ORIGIN = true;
     const results = await children(
         <>
@@ -97,6 +97,10 @@ if (IS_OPENAI) {
             const negativeOnes = meta
                 .filter(meta => meta.index === -1);
             console.log({ negativeOnes: negativeOnes.length });
+            const questions = [...new Set(
+                meta
+                    .flatMap(({ questions }) => questions || [])
+            )].join("\n");
             const {
                 title,
                 summary
@@ -104,7 +108,7 @@ if (IS_OPENAI) {
                 .filter(meta => meta.index === -1)
                 .sort(({ historyLength: a }, { historyLength: b }) => a > b ? -1 : 1)
                 .at(0);
-            return [url, title, summary].join("\n\n");
+            return [url, title, summary, "Questions:", questions].join("\n\n");
         })
 
     console.log(summaries.join("\n\n\n"))
